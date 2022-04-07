@@ -1,4 +1,4 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2019 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -75,11 +75,13 @@ public final class CameraPlugin implements FlutterPlugin, ActivityAware {
 
   @Override
   public void onDetachedFromActivity() {
-    // Could be on too low of an SDK to have started listening originally.
-    if (methodCallHandler != null) {
-      methodCallHandler.stopListening();
-      methodCallHandler = null;
+    if (methodCallHandler == null) {
+      // Could be on too low of an SDK to have started listening originally.
+      return;
     }
+
+    methodCallHandler.stopListening();
+    methodCallHandler = null;
   }
 
   @Override

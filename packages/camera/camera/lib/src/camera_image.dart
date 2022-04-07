@@ -1,10 +1,9 @@
-// Copyright 2013 The Flutter Authors. All rights reserved.
+// Copyright 2018 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:typed_data';
 
-import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -14,14 +13,14 @@ import 'package:flutter/material.dart';
 /// format of the Image.
 class Plane {
   Plane._fromPlatformData(Map<dynamic, dynamic> data)
-      : bytes = data['bytes'] as Uint8List,
-        bytesPerPixel = data['bytesPerPixel'] as int?,
-        bytesPerRow = data['bytesPerRow'] as int,
-        height = data['height'] as int?,
-        width = data['width'] as int?;
+      : bytes = data['bytes'],
+        bytesPerPixel = data['bytesPerPixel'],
+        bytesPerRow = data['bytesPerRow'],
+        height = data['height'],
+        width = data['width'];
 
   /// Bytes representing this plane.
-  final Uint8List bytes;
+  final Uint8List? bytes;
 
   /// The distance between adjacent pixel samples on Android, in bytes.
   ///
@@ -29,7 +28,7 @@ class Plane {
   final int? bytesPerPixel;
 
   /// The row stride for this color plane, in bytes.
-  final int bytesPerRow;
+  final int? bytesPerRow;
 
   /// Height of the pixel buffer on iOS.
   ///
@@ -40,6 +39,32 @@ class Plane {
   ///
   /// Will be `null` on Android.
   final int? width;
+}
+
+// TODO:(bmparr) Turn [ImageFormatGroup] to a class with int values.
+/// Group of image formats that are comparable across Android and iOS platforms.
+enum ImageFormatGroup {
+  /// The image format does not fit into any specific group.
+  unknown,
+
+  /// Multi-plane YUV 420 format.
+  ///
+  /// This format is a generic YCbCr format, capable of describing any 4:2:0
+  /// chroma-subsampled planar or semiplanar buffer (but not fully interleaved),
+  /// with 8 bits per color sample.
+  ///
+  /// On Android, this is `android.graphics.ImageFormat.YUV_420_888`. See
+  /// https://developer.android.com/reference/android/graphics/ImageFormat.html#YUV_420_888
+  ///
+  /// On iOS, this is `kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange`. See
+  /// https://developer.apple.com/documentation/corevideo/1563591-pixel_format_identifiers/kcvpixelformattype_420ypcbcr8biplanarvideorange?language=objc
+  yuv420,
+
+  /// 32-bit BGRA.
+  ///
+  /// On iOS, this is `kCVPixelFormatType_32BGRA`. See
+  /// https://developer.apple.com/documentation/corevideo/1563591-pixel_format_identifiers/kcvpixelformattype_32bgra?language=objc
+  bgra8888,
 }
 
 /// Describes how pixels are represented in an image.
@@ -61,13 +86,9 @@ class ImageFormat {
 
 ImageFormatGroup _asImageFormatGroup(dynamic rawFormat) {
   if (defaultTargetPlatform == TargetPlatform.android) {
-    switch (rawFormat) {
-      // android.graphics.ImageFormat.YUV_420_888
-      case 35:
-        return ImageFormatGroup.yuv420;
-      // android.graphics.ImageFormat.JPEG
-      case 256:
-        return ImageFormatGroup.jpeg;
+    // android.graphics.ImageFormat.YUV_420_888
+    if (rawFormat == 35) {
+      return ImageFormatGroup.yuv420;
     }
   }
 
@@ -98,14 +119,10 @@ class CameraImage {
   /// CameraImage Constructor
   CameraImage.fromPlatformData(Map<dynamic, dynamic> data)
       : format = ImageFormat._fromPlatformData(data['format']),
-        height = data['height'] as int,
-        width = data['width'] as int,
-        lensAperture = data['lensAperture'] as double?,
-        sensorExposureTime = data['sensorExposureTime'] as int?,
-        sensorSensitivity = data['sensorSensitivity'] as double?,
-        planes = List<Plane>.unmodifiable((data['planes'] as List<dynamic>)
-            .map<Plane>((dynamic planeData) =>
-                Plane._fromPlatformData(planeData as Map<dynamic, dynamic>)));
+        height = data['height'],
+        width = data['width'],
+        planes = List<Plane>.unmodifiable(data['planes']
+            .map((dynamic planeData) => Plane._fromPlatformData(planeData)));
 
   /// Format of the image provided.
   ///
@@ -117,27 +134,16 @@ class CameraImage {
   ///
   /// For formats where some color channels are subsampled, this is the height
   /// of the largest-resolution plane.
-  final int height;
+  final int? height;
 
   /// Width of the image in pixels.
   ///
   /// For formats where some color channels are subsampled, this is the width
   /// of the largest-resolution plane.
-  final int width;
+  final int? width;
 
   /// The pixels planes for this image.
   ///
   /// The number of planes is determined by the format of the image.
   final List<Plane> planes;
-
-  /// The aperture settings for this image.
-  ///
-  /// Represented as an f-stop value.
-  final double? lensAperture;
-
-  /// The sensor exposure time for this image in nanoseconds.
-  final int? sensorExposureTime;
-
-  /// The sensor sensitivity in standard ISO arithmetic units.
-  final double? sensorSensitivity;
 }
